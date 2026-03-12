@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta charset="UTF-8">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
@@ -165,6 +166,28 @@ margin-top:5px;
 .toggle{
 margin-top:10px;
 background:#444;
+}
+
+@media (max-width:800px){
+
+.container{
+flex-direction:column;
+}
+
+.painel{
+width:100%;
+box-shadow:none;
+border-bottom:1px solid #ddd;
+}
+
+.conteudo{
+padding:15px;
+}
+
+.gasto{
+font-size:14px;
+}
+
 }
 
 </style>
