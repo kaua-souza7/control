@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<title>Controle Financeiro</title>
+
+<style>
+
+:root{
+--bg:#f4f6fb;
+--card:#ffffff;
+--text:#222;
+--accent:#5b6cff;
+}
+
+.dark{
+--bg:#1e1f25;
+--card:#2a2c33;
+--text:#eaeaea;
+}
+
+body{
+margin:0;
+font-family:Arial;
+background:var(--bg);
+color:var(--text);
+}
+
+.container{
+display:flex;
+height:100vh;
+}
+
+.left{
+width:320px;
+background:var(--card);
+padding:20px;
+box-shadow:2px 0 10px rgba(0,0,0,0.08);
+overflow:auto;
+}
+
+.right{
+flex:1;
+padding:20px;
+overflow:auto;
+}
+
+h2{
+margin-top:0;
+}
+
+input,select,button{
+width:100%;
+padding:8px;
+margin-top:6px;
+border-radius:6px;
+border:1px solid #ccc;
+box-sizing:border-box;
+}
+
+button{
+background:var(--accent);
+color:white;
+border:none;
+font-weight:bold;
+cursor:pointer;
+}
+
+.card{
+background:var(--card);
+padding:15px;
+border-radius:8px;
+margin-bottom:12px;
+box-shadow:0 3px 8px rgba(0,0,0,0.05);
+}
+
+.gasto{
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:#f8f9ff;
+padding:10px 12px;
+border-radius:8px;
+margin-bottom:8px;
+font-size:13px;
+box-shadow:0 2px 4px rgba(0,0,0,0.05);
+color:#000;
+}
+
+.info{
+flex:1;
+line-height:1.3;
+}
+
+.categoria{
+font-size:11px;
+color:#666;
+}
+
+.cat-mercado{
+color:#2ecc71;
+font-weight:bold;
+}
+
+.cat-transporte{
+color:#3498db;
+font-weight:bold;
+}
+
+.cat-lazer{
+color:#9b59b6;
+font-weight:bold;
+}
+
+.cat-contas{
+color:#e74c3c;
+font-weight:bold;
+}
+
+.cat-cartao{
+color:#f1c40f;
+font-weight:bold;
+}
+
+.cat-saude{
+color:#e67e22;
+font-weight:bold;
+}
+
+.cat-outros{
+color:#7f8c8d;
+font-weight:bold;
+}
+
+.parcela{
+font-size:10px;
+color:#ff9800;
+}
+
+.remover{
+background:#ff4d4d;
+border:none;
+color:white;
+width:22px;
+height:22px;
+border-radius:50%;
+cursor:pointer;
+font-size:12px;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+.remover:hover{
+background:#e63939;
+}
+
+.resumo{
+font-size:13px;
+margin-top:5px;
+}
+
+.toggle{
+margin-top:10px;
+background:#444;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="left">
+
+<h2>Financeiro</h2>
+
+<label>Mês</label>
+<input type="month" id="mes">
+
+<label>Salário</label>
+<input type="number" id="salario">
+
+<label>Meta de economia</label>
+<input type="number" id="meta">
+
+<div class="resumo">Total gasto: R$ <span id="total">0</span></div>
+<div class="resumo">Sobra: R$ <span id="resto">0</span></div>
+<div class="resumo">% gasto: <span id="percentual">0</span>%</div>
+
+<hr>
+
+<h3>Novo gasto</h3>
+
+<input type="text" id="descricao" placeholder="Descrição">
+
+<input type="number" id="valor" placeholder="Valor">
+
+<select id="categoria">
+<option>Mercado</option>
+<option>Transporte</option>
+<option>Lazer</option>
+<option>Contas</option>
+<option>Cartão</option>
+<option>Saúde</option>
+<option>Outros</option>
+</select>
+
+<label>Parcelas</label>
+<input type="number" id="parcelas">
+
+<button onclick="addGasto()">Adicionar gasto</button>
+
+<hr>
+
+<button onclick="exportar()">Exportar Excel</button>
+
+<button class="toggle" onclick="modoEscuro()">Modo escuro</button>
+
+</div>
+
+<div class="right">
+
+<div class="card">
+
+<h3>Gastos do mês</h3>
+
+<div id="lista"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+let dados = JSON.parse(localStorage.getItem("financeiroAPP")) || {}
+let mesAtual = ""
+
+const mesInput = document.getElementById("mes")
+const salarioInput = document.getElementById("salario")
+const metaInput = document.getElementById("meta")
+
+const totalSpan = document.getElementById("total")
+const restoSpan = document.getElementById("resto")
+const percentualSpan = document.getElementById("percentual")
+
+const descricaoInput = document.getElementById("descricao")
+const valorInput = document.getElementById("valor")
+const categoriaInput = document.getElementById("categoria")
+const parcelasInput = document.getElementById("parcelas")
+
+mesInput.addEventListener("change",carregarMes)
+
+function carregarMes(){
+
+mesAtual = mesInput.value
+
+if(!dados[mesAtual]){
+
+dados[mesAtual] = {salario:0,meta:0,gastos:[]}
+
+}
+
+salarioInput.value = dados[mesAtual].salario
+metaInput.value = dados[mesAtual].meta
+
+atualizar()
+
+}
+
+salarioInput.addEventListener("input",()=>{
+
+dados[mesAtual].salario = parseFloat(salarioInput.value)||0
+salvar()
+atualizar()
+
+})
+
+metaInput.addEventListener("input",()=>{
+
+dados[mesAtual].meta = parseFloat(metaInput.value)||0
+salvar()
+
+})
+
+function addGasto(){
+
+let desc = descricaoInput.value
+let valor = parseFloat(valorInput.value)
+let cat = categoriaInput.value
+let parcelas = parseInt(parcelasInput.value) || 1
+
+if(!desc || !valor){
+
+alert("Preencha os campos")
+return
+
+}
+
+let valorParcela = valor/parcelas
+let data = new Date(mesAtual+"-01")
+
+for(let i=0;i<parcelas;i++){
+
+let mes = new Date(data)
+mes.setMonth(mes.getMonth()+i)
+
+let chave = mes.toISOString().slice(0,7)
+
+if(!dados[chave]) dados[chave]={salario:0,meta:0,gastos:[]}
+
+dados[chave].gastos.push({
+
+desc:desc,
+valor:valorParcela,
+categoria:cat,
+parcela:(i+1)+"/"+parcelas
+
+})
+
+}
+
+descricaoInput.value=""
+valorInput.value=""
+parcelasInput.value=""
+
+salvar()
+atualizar()
+
+}
+
+function atualizar(){
+
+let lista = document.getElementById("lista")
+lista.innerHTML=""
+
+let total = 0
+
+dados[mesAtual].gastos.forEach((g,i)=>{
+
+total += g.valor
+
+let div = document.createElement("div")
+div.className="gasto"
+
+div.innerHTML=`
+
+<div class="info">
+
+<strong>${g.desc}</strong> - R$ ${g.valor.toFixed(2)}
+
+<div class="categoria cat-${g.categoria.toLowerCase()}">${g.categoria}</div>
+
+${g.parcela ? `<div class="parcela">${g.parcela}</div>` : ''}
+
+</div>
+
+<button class="remover" onclick="remover(${i})">✕</button>
+
+`
+
+lista.appendChild(div)
+
+})
+
+let salario = dados[mesAtual].salario
+
+totalSpan.innerText = total.toFixed(2)
+
+let resto = salario-total
+restoSpan.innerText = resto.toFixed(2)
+
+let percentual = salario ? (total/salario*100) : 0
+percentualSpan.innerText = percentual.toFixed(1)
+
+}
+
+function remover(i){
+
+dados[mesAtual].gastos.splice(i,1)
+salvar()
+atualizar()
+
+}
+
+function salvar(){
+
+localStorage.setItem("financeiroAPP",JSON.stringify(dados))
+
+}
+
+function exportar(){
+
+let csv = "Mes,Descricao,Valor,Categoria,Parcela\n"
+
+for(let mes in dados){
+
+dados[mes].gastos.forEach(g=>{
+
+csv += `${mes},${g.desc},${g.valor},${g.categoria},${g.parcela}\n`
+
+})
+
+}
+
+let blob = new Blob([csv],{type:"text/csv"})
+let url = URL.createObjectURL(blob)
+
+let a = document.createElement("a")
+a.href = url
+a.download = "financeiro.csv"
+a.click()
+
+}
+
+function modoEscuro(){
+
+document.body.classList.toggle("dark")
+
+}
+
+let hoje = new Date().toISOString().slice(0,7)
+
+mesInput.value = hoje
+
+carregarMes()
+
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+
+</body>
+</html>
+```
